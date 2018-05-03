@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Renew Let's encrypt SSL certificates with certbot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot --nginx renew --quiet --agree-tos
+

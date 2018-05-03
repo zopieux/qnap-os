@@ -1,0 +1,112 @@
+---
+- name: copy sshd config
+  template:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - test sshd config and reload
+ 
+- name: install packages
+  pacman:
+    name:
+      - nginx
+      - certbot
+      - certbot-nginx
+      - nextcloud
+      - php-pgsql
+      - postgresql
+      - php-intl
+      - php-apcu
+      - htop
+      - smbclient
+      - samba
+      - ffmpeg
+    state: present
+
+- name: copy nginx config
+  block:
+    - file:
+        path: /etc/nginx/{{ item }}
+        owner: root
+        group: root
+        mode: '0755'
+        state: directory
+      with_items: [conf.d, sites]
+    - file:
+        src: nginx/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - template:
+        src: nginx/conf.d/{{ item }}
+        dest: /etc/nginx/conf.d/{{ item }}
+        owner: root
+        group: root
+        mode: '0644'
+      with_items:
+        - certbot.conf
+    - template:
+        src: nginx/sites/{{ item }}
+        dest: /etc/nginx/sites/{{ item }}
+        owner: root
+        group: root
+        mode: '0644'
+      with_items:
+        - nextcloud.conf
+      notify:
+        - reload nginx
+
+- name: copy systemd files
+  template:
+    src: systemd/{{ item }}
+    dest: /etc/systemd/system/{{ item }}
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - certbot.service
+    - certbot.timer
+
+- name: enable systemd units
+  systemd:
+    state: started
+    enabled: yes
+    name: '{{ item }}'
+    daemon_reload: yes
+  with_items:
+    - nginx.service
+    - certbot.timer
+
+- name: copy Let's encrypt private account key
+  block:
+    - file:
+        path: /etc/letsencrypt/accounts/acme-v02.api.letsencrypt.org/directory/
+        owner: root
+        group: root
+        mode: '0700'
+        state: directory
+        recurse: yes
+    - copy:
+        src: private/acme-account-key.pem
+        dest: /etc/letsencrypt/accounts/acme-v02.api.letsencrypt.org/directory/
+        owner: root
+        group: root
+        mode: '0700'
+  tags: [certbot]
+
+- name: renew SSL certificates
+  command: >
+    /usr/bin/certbot certonly
+    -a dns-alwaysdata --manual-public-ip-logging-ok --agree-tos --no-eff-email --renew-by-default
+    --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory
+    --email web+letsencrypt@zopieux.com
+    -d '*.home.zopi.eu'
+  environment:
+    LANG: en_US.UTF-8
+  tags: [certbot]
+
+# vim: et ts=2 sw=2:

@@ -1,0 +1,6 @@
+---
+- name: nas
+  hosts: nas
+  roles:
+    - nas
+

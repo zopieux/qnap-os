@@ -1,0 +1,12 @@
+---
+- name: test sshd config and reload
+  command: sshd -t
+  notify: ['reload sshd']
+
+- name: reload sshd
+  systemd: name=ssh state=reloaded
+
+- name: reload nginx
+  systemd: name=nginx state=reloaded
+
+# vim: set et ts=4 sw=4

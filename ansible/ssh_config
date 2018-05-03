@@ -1,0 +1,9 @@
+Host *
+	# slow cpu
+	Compression no
+	# share connection between clients
+	ControlPath ssh-master-%l-%r@%h:%p
+	ControlMaster auto
+	# keep connection open
+	ControlPersist yes
+
